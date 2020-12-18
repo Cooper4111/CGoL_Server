@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 #pragma warning disable SYSLIB0011
 
@@ -75,11 +76,15 @@ namespace LifeServer
             {
                 this.wh.WaitOne();
                 cells = ThreadMaster.ClientGetCells();
-                data  = new byte[cells.Length * sizeof(int)];
+                // sending metadata
+                data = new byte[sizeof(int)];
+                Buffer.BlockCopy(new int[1]{cells.Length}, 0, data, 0, data.Length);
+                stream.Write(data, 0, data.Length);
+                
+                // sending data
+                data = new byte[cells.Length * sizeof(int)];
                 Buffer.BlockCopy(cells, 0, data, 0, data.Length);
                 stream.Write(data, 0, data.Length);
-                // Test perfomance with serialization as alternative
-                // Maybe UPD for broadcasting?
             }
         }
 
@@ -91,11 +96,7 @@ namespace LifeServer
             {
                 if(!stream.DataAvailable)
                     continue;
-                try{
-                    msg = (int)formatter.Deserialize(stream);
-                }catch(Exception E){
-                    Console.WriteLine("ХОБА! Оттут ут падает: " + E);
-                }
+                msg = (int)formatter.Deserialize(stream);
                 if(msg == NetCode["getFieldDimensions"])
                 {
                     Console.WriteLine($"Клиент {Thread.CurrentThread.GetHashCode()} запросил размеры поля");

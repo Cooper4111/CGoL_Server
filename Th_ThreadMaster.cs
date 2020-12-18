@@ -7,7 +7,6 @@ using System.Threading;
 
 namespace LifeServer
 {
-    // Сделать синглтоном? Не. Неудобно и бессмысленно.
     public static class ThreadMaster{
 
         static int[] localCellMap;
@@ -43,7 +42,6 @@ namespace LifeServer
 
         public static int[] ClientGetCells(){
             lock(localCellMapLocker){
-                // if localCellMap != null
                 return localCellMap;
             }
         }
