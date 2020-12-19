@@ -48,7 +48,7 @@ namespace LifeServer
                     StreamField(stream);
                 }
                 else{
-                    // Error message to Client
+                    //formatter.Serialize(stream, NetCode[" "]);
                 }
             }
             catch(Exception ex)
