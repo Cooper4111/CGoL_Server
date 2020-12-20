@@ -24,19 +24,19 @@ namespace LifeServer
             public readonly string pass;
             public readonly byte[] color; // array size of 4: ARGB
 
-            public Account(string login, string pass, byte[] color)
+            public Account(string login, string pass, byte[] color, int ID)
             {
                 this.login = login;
                 this.pass  = pass;
                 this.color = color;
             }
-            public Account(string login, string pass, int color)
+            public Account(string login, string pass, int color, int ID)
             {
                 this.login = login;
                 this.pass  = pass;
                 this.color = color.ToByte();
             }
-            public Account(string login, string pass)
+            public Account(string login, string pass, int ID)
             {
                 this.login = login;
                 this.pass  = pass;
@@ -44,16 +44,16 @@ namespace LifeServer
         }
         private static Dictionary<string, Account> Accs = new Dictionary<string, Account>
             {
-                { "CCorax",      new Account("CCorax",      "CCorax",      new byte[]{0, 0,   255, 0  }) },
-                { "Mephisto",    new Account("Mephisto",    "Mephisto",    new byte[]{0, 255, 255, 255}) },
-                { "PlagueEater", new Account("PlagueEater", "PlagueEater", new byte[]{0, 168, 168, 0  }) },
-                { "Nikolaj",     new Account("Nikolaj",     "Nikolaj",     new byte[]{0, 0,   255, 255}) },
-                { "Alena",       new Account("Alena",       "Alena",       new byte[]{0, 168, 168, 168}) },
-                { "Mozenrath",   new Account("Mozenrath",   "Mozenrath",   new byte[]{0, 255,   0, 255}) },
-                { "Deadline",    new Account("Deadline",    "Deadline",    new byte[]{0, 255, 255, 64 }) },
-                { "Egor",        new Account("Egor",        "Egor",        new byte[]{0, 255, 168, 128}) }
+                { "CCorax",      new Account("CCorax",      "CCorax",      new byte[]{ 255, 0,   255, 0  }, 0) }, // Green
+                { "Mephisto",    new Account("Mephisto",    "Mephisto",    new byte[]{ 255, 255, 0,   0  }, 1) }, // Red
+                { "PlagueEater", new Account("PlagueEater", "PlagueEater", new byte[]{ 255, 255, 168, 0  }, 2) }, // Orange
+                { "Nikolaj",     new Account("Nikolaj",     "Nikolaj",     new byte[]{ 255, 0,   255, 255}, 3) }, // Teal
+                { "Alena",       new Account("Alena",       "Alena",       new byte[]{ 255, 200, 216, 240}, 4) }, // Gray
+                { "Mozenrath",   new Account("Mozenrath",   "Mozenrath",   new byte[]{ 255, 255, 0,   192}, 5) }, // Purple
+                { "Deadline",    new Account("Deadline",    "Deadline",    new byte[]{ 255, 0,   0,   255}, 6) }, // Blue
+                { "Egor",        new Account("Egor",        "Egor",        new byte[]{ 255, 255, 255, 96 }, 7) }  // Yellow
             };
-        public static byte[] GetColor(string username)
+        public static byte[] GetByteColor(string username)
         {
             if (Accs.ContainsKey(username))
             {
@@ -61,6 +61,15 @@ namespace LifeServer
             }
             else
                 return null;
+        }
+        public static int GetIntColor(string username)
+        {
+            if (Accs.ContainsKey(username))
+            {
+                return Accs[username].color.ToInt();
+            }
+            else
+                return 0;
         }
         public static bool Authorize(string username, string pass)
         {
@@ -125,6 +134,20 @@ namespace LifeServer
             byte[] bar = new byte[sizeof(int)];
             Buffer.BlockCopy(foo, 0, bar, 0, sizeof(int));
             return bar;
+        }
+        public static int ToInt(this byte[] bar)
+        {
+            int[] foo  = new int[] { sizeof(int) };
+            Buffer.BlockCopy(bar, 0, foo, 0, sizeof(int));
+            return foo[0];
+        }
+        public static void Print(this int[] arr)
+        {
+            string S = "[ ";
+            foreach (int i in arr)
+                S += $"{i} ";
+            S += "]";
+            Console.WriteLine(S);
         }
     }
 }

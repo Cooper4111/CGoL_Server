@@ -82,9 +82,11 @@ namespace LifeServer
         
         public void getCellMap(ref int[] dest){
 
-            dest = new int[cellMap.Count];
-            cellMap.CopyTo(dest);
-
+            dest = new int[cellMap.Count+2];
+            cellMap.CopyTo(dest, 2);
+            dest[0] = dest.Length;
+            dest[1] = Accounts.GetIntColor("Mephisto");
+            //dest.Print();
         }
         /// <summary>
         /// DEPRECATED, for testing only

@@ -78,7 +78,7 @@ namespace LifeServer
                 cells = ThreadMaster.ClientGetCells();
                 // sending metadata
                 data = new byte[sizeof(int)];
-                Buffer.BlockCopy(new int[1]{cells.Length}, 0, data, 0, data.Length);
+                Buffer.BlockCopy(new int[]{cells.Length}, 0, data, 0, data.Length);
                 stream.Write(data, 0, data.Length);
                 
                 // sending data
@@ -101,7 +101,7 @@ namespace LifeServer
                 if (msg == NetCode["authorizationRequest"])
                 {
                     formatter.Serialize(stream, NetCode["authorizationBegin"]);
-                    byte[] byteLoginPass = new byte[128];
+                    byte[] byteLoginPass  = new byte[128];
                     StringBuilder builder = new StringBuilder();
                     int bytes = 0;
                     do
@@ -137,7 +137,7 @@ namespace LifeServer
                     {
                         formatter.Serialize(stream, NetCode["acceptStruct"]);
                         int[] lifeStructure = (int[])formatter.Deserialize(stream);
-                        ThreadMaster.ClientAddCells(lifeStructure);
+                        ThreadMaster.ClientAddCells(lifeStructure); // , clientID);
                     }
                 }
             }
