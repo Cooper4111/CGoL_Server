@@ -6,14 +6,14 @@ using System.Threading;
 
 namespace LifeServer
 {
-    class TCP_Server
+    class _TCP_server
     {
         static TcpListener listener;       
         const int port        = 8888;
         int client_thread_ID  = 0;
         bool BC_is_Alive      = true;
 
-        public TCP_Server(){}
+        public _TCP_server(){}
 
         public void Run()
         {

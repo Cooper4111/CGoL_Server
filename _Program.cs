@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace LifeServer
 {
-    class Program
+    class _Program
     {
         static void Main(string[] args)
         {

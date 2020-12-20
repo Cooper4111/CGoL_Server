@@ -14,14 +14,14 @@ namespace LifeServer
         static int msPerFrame;
         static int fieldWidth;
         static int fieldHeight;
-        static Life life;
+        static _Life life;
         static Thread serverThread;
-        static TCP_Server server;
+        static _TCP_server server;
         static object localCellMapLocker = new object();
         static object lifeLocker = new object();
 
         static void startServer(){
-            server       = new TCP_Server();
+            server       = new _TCP_server();
             serverThread = new Thread(server.Run);
             serverThread.Start();
         }
@@ -58,7 +58,7 @@ namespace LifeServer
             fieldWidth   = Width;
             fieldHeight  = Height;
             generation   = 0;
-            life         = new Life(Width, Height);
+            life         = new _Life(Width, Height);
             msPerFrame   = 55;
             localCellMap = null;
             startServer();

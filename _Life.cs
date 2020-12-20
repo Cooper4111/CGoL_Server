@@ -60,7 +60,7 @@ namespace LifeServer
         }
     }
 
-    class Life
+    class _Life
     {   
         int          Width;
         int          Heigth;
@@ -69,7 +69,7 @@ namespace LifeServer
         HashSet<int> cells2kill;
         HashSet<int> cells2born;
 
-        public Life(int Width, int Heigth)
+        public _Life(int Width, int Heigth)
         {
             this.Width      = Width;
             this.Heigth     = Heigth;

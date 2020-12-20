@@ -27,21 +27,20 @@ namespace LifeServer
             public Account(string login, string pass, byte[] color)
             {
                 this.login = login;
-                this.pass = pass;
+                this.pass  = pass;
                 this.color = color;
             }
             public Account(string login, string pass, int color)
             {
                 this.login = login;
-                this.pass = pass;
+                this.pass  = pass;
                 this.color = color.ToByte();
             }
             public Account(string login, string pass)
             {
                 this.login = login;
-                this.pass = pass;
+                this.pass  = pass;
             }
-
         }
         private static Dictionary<string, Account> Accs = new Dictionary<string, Account>
             {
@@ -54,7 +53,6 @@ namespace LifeServer
                 { "Deadline",    new Account("Deadline",    "Deadline",    new byte[]{0, 255, 255, 64 }) },
                 { "Egor",        new Account("Egor",        "Egor",        new byte[]{0, 255, 168, 128}) }
             };
-
         public static byte[] GetColor(string username)
         {
             if (Accs.ContainsKey(username))
@@ -80,22 +78,25 @@ namespace LifeServer
     }
     public class NetCodes
     {
-
+        // Singletone
         private static Dictionary<string, int> dict;
         private static NetCodes instance;
 
         private NetCodes()
         {
             dict = new Dictionary<string, int>
-            {
-                { "dialogue",             1 },
-                { "connectionSuccessful", 2 },
-                { "getFieldDimensions",   3 },
-                { "getStream",            4 },
-                { "login",                5 },
-                { "loginSuccesscful",     6 },
-                { "struct",               7 },
-                { "acceptStruct",         8 }
+            {        
+                { "wrongConnectionCode",    -1 },
+                { "dialogue",                1 },
+                { "connectionSuccessful",    2 },
+                { "getFieldDimensions",      3 },
+                { "getStream",               4 },
+                { "authorizationRequest",    5 },
+                { "authorizationBegin",      6 },
+                { "authorizationSuccessful", 7 },
+                { "authorizationFailed",     8 },
+                { "struct",                  9 },
+                { "acceptStruct",            10},
             };
         }
 
@@ -116,7 +117,6 @@ namespace LifeServer
                 dict.Add(key, value);
         }
     }
-
     public static class Helpers
     {
         public static byte[] ToByte(this int i)

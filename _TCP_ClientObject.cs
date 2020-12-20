@@ -48,7 +48,7 @@ namespace LifeServer
                     StreamField(stream);
                 }
                 else{
-                    //formatter.Serialize(stream, NetCode[" "]);
+                    formatter.Serialize(stream, NetCode["wrongConnectionCode"]);
                 }
             }
             catch(Exception ex)
@@ -89,6 +89,7 @@ namespace LifeServer
         }
 
         void Dialogue(NetworkStream stream){
+            bool authorized = false;
             if(stream == null)
                 return;
             int msg = 0;
@@ -97,22 +98,47 @@ namespace LifeServer
                 if(!stream.DataAvailable)
                     continue;
                 msg = (int)formatter.Deserialize(stream);
-                if(msg == NetCode["getFieldDimensions"])
+                if (msg == NetCode["authorizationRequest"])
                 {
-                    Console.WriteLine($"Клиент {Thread.CurrentThread.GetHashCode()} запросил размеры поля");
-                    Console.WriteLine($"Поле: {ThreadMaster.getDim()[0]}x{ThreadMaster.getDim()[1]}");
-                    formatter.Serialize(stream, ThreadMaster.getDim());
-                    Console.WriteLine($"Размеры отправлены.");
+                    formatter.Serialize(stream, NetCode["authorizationBegin"]);
+                    byte[] byteLoginPass = new byte[128];
+                    StringBuilder builder = new StringBuilder();
+                    int bytes = 0;
+                    do
+                    {
+                        bytes = stream.Read(byteLoginPass, 0, byteLoginPass.Length);
+                        builder.Append(Encoding.Unicode.GetString(byteLoginPass, 0, bytes));
+                    }
+                    while (stream.DataAvailable);
+                    string loginPass = builder.ToString();
+                    if (Accounts.Authorize(loginPass.Split(' ')[0], loginPass.Split(' ')[1]))
+                    {
+                        authorized = true;
+                        Console.WriteLine($"{loginPass} authorized!");
+                        formatter.Serialize(stream, NetCode["authorizationSuccessful"]);
+                    }
+                    else
+                    {
+                        formatter.Serialize(stream, NetCode["authorizationFailed"]);
+                    }
+                    
                 }
-                if(msg == NetCode["login"])
+                if (authorized)
                 {
+                    if (msg == NetCode["getFieldDimensions"])
+                    {
+                        Console.WriteLine($"Клиент {Thread.CurrentThread.GetHashCode()} запросил размеры поля");
+                        Console.WriteLine($"Поле: {ThreadMaster.getDim()[0]}x{ThreadMaster.getDim()[1]}");
+                        formatter.Serialize(stream, ThreadMaster.getDim());
+                        Console.WriteLine($"Размеры отправлены.");
+                    }
 
-                    formatter.Serialize(stream, NetCode["loginSuccesscful"]);
-                }
-                if(msg == NetCode["struct"]){
-                    formatter.Serialize(stream, NetCode["acceptStruct"]);
-                    int[] lifeStructure = (int[])formatter.Deserialize(stream);
-                    ThreadMaster.ClientAddCells(lifeStructure);
+                    if (msg == NetCode["struct"])
+                    {
+                        formatter.Serialize(stream, NetCode["acceptStruct"]);
+                        int[] lifeStructure = (int[])formatter.Deserialize(stream);
+                        ThreadMaster.ClientAddCells(lifeStructure);
+                    }
                 }
             }
         }
