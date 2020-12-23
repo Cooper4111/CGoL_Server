@@ -30,10 +30,14 @@ namespace LifeServer
             while(true){
                 generation++;
                 lock(lifeLocker){
-                    life.iterateOnce();
+                    life.IterateOnce();
                 }
-                lock(localCellMapLocker){
-                    life.getCellMap(ref localCellMap);
+                lock (lifeLocker)
+                {
+                    lock (localCellMapLocker)
+                    {
+                        life.GetCellMap(ref localCellMap);
+                    }
                 }
                 ClientThreads.StartEveryone();
                 Thread.Sleep(msPerFrame);
@@ -45,9 +49,9 @@ namespace LifeServer
                 return localCellMap;
             }
         }
-        public static void ClientAddCells(int[] cellHashes){
+        public static void ClientAddCells(int[] cellHashes, byte playerID){
             lock(lifeLocker){
-                life.addStructure(cellHashes);
+                life.AddStructure(cellHashes, playerID);
             }
         }
         public static int[] getDim(){
@@ -59,7 +63,7 @@ namespace LifeServer
             fieldHeight  = Height;
             generation   = 0;
             life         = new _Life(Width, Height);
-            msPerFrame   = 55;
+            msPerFrame   = 25;
             localCellMap = null;
             startServer();
             Live();
