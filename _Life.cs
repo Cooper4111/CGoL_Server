@@ -27,227 +27,404 @@ using System.Threading;
 
 namespace LifeServer
 {
-    class Field{
-        int Width, Heigth;
-        byte[,] field;
 
-        public Field(int Width, int Heigth){
-            this.Width  = Width;
-            this.Heigth = Heigth;
-            field       = new byte[Width,Heigth];
-            zeroInit();
-            
-        }
-        void zeroInit(){
-            for(int H = 0; H < Heigth; H++){
-                for(int W = 0; W < Width; W++){
-                    field[W,H] = 0;
-                }
-            }            
-        }
-        public byte this[int x, int y]
+    class _Life
+    {
+        private class Field
         {
-            get{
-                x = (x+Width) % Width;
-                y = (y+Heigth) % Heigth;
-                return field[x,y];
-            } 
-            set{
-                x = (x+Width) % Width;
-                y = (y+Heigth) % Heigth;
-                field[x,y] = value;
+            int Width, Heigth;
+            byte[,] field;
+
+            public Field(int Width, int Heigth)
+            {
+                this.Width = Width;
+                this.Heigth = Heigth;
+                field = new byte[Width, Heigth];
+                zeroInit();
+
+            }
+            void zeroInit()
+            {
+                for (int H = 0; H < Heigth; H++)
+                {
+                    for (int W = 0; W < Width; W++)
+                    {
+                        field[W, H] = 0;
+                    }
+                }
+            }
+            public byte this[int x, int y]
+            {
+                get
+                {
+                    x = (x + Width) % Width;
+                    y = (y + Heigth) % Heigth;
+                    return field[x, y];
+                }
+                set
+                {
+                    x = (x + Width) % Width;
+                    y = (y + Heigth) % Heigth;
+                    field[x, y] = value;
+                }
+            }
+        }
+
+        int Width;
+        int Heigth;
+        const int playerNum = 7;
+        Field field;
+        Random rnd;
+        HashSet<int> cells2born;
+        HashSet<int>[] cells2bornArr;
+        HashSet<int>[] cells2dieArr;
+        HashSet<int>[] cellMapArr;
+        
+        public _Life(int ArgWidth, int ArgHeigth)
+        {
+            Width = ArgWidth;
+            Heigth = ArgHeigth;
+            field = new Field(Width, Heigth);
+            //cellMap    = new Dictionary<int, byte>();
+
+            cells2born = new HashSet<int>(256);
+
+            cells2dieArr = new HashSet<int>[playerNum];
+            cells2bornArr = new HashSet<int>[playerNum]; // clarify number of possible players
+            cellMapArr = new HashSet<int>[playerNum]; // let is be constant 10 for now
+
+            for (int i = 0; i < playerNum; i++)
+                cells2bornArr[i] = new HashSet<int>(256);
+            for (int i = 0; i < playerNum; i++)
+                cells2dieArr[i] = new HashSet<int>(256);
+            for (int i = 0; i < playerNum; i++)
+                cellMapArr[i] = new HashSet<int>(256);
+
+            rnd = new Random(DateTimeOffset.Now.Second);
+            DrawGlider(4, 4, "NW");
+            //DrawGlider(10, 10, "SE");
+            //DrawGlider(20, 6, "NW");
+        }
+
+        int TotalCells()
+        {
+            int totalCells = 0;
+            int i = 0;
+            for(int index = 0; index < playerNum; index++)
+            {
+                i++;
+                totalCells += cellMapArr[index].Count;
+                Console.WriteLine($"player {index+1} cells count: {cellMapArr[index].Count}, player cells: ");
+                foreach (int hash in cellMapArr[index])
+                    Console.WriteLine($"x: {Hash2crd(hash)[0]}, y: {Hash2crd(hash)[1]}");
+            }
+            return totalCells;
+        }
+
+        /// <summary>
+        /// Consequently writes int[] chunks of following structure {[1] count, [2] color, [3...n] coordinate hashes} to dest 
+        /// </summary>
+        /// <param name="dest"></param>
+        public void GetCellMap(ref int[] dest)
+        {
+            int offset = 0;
+            int totalCells = TotalCells();
+            dest = new int[totalCells + playerNum*2];
+            for (byte playerIndex = 0; playerIndex < playerNum; playerIndex++)
+            {
+                offset += 2;
+                cellMapArr[playerIndex].CopyTo(dest, offset);
+                dest[offset-2] = cellMapArr[playerIndex].Count;
+                dest[offset-1] = Accounts.GetIntColor(Accounts.ID2username[playerIndex + 1]);
+                offset += dest[offset - 2];
+            }
+            dest.Print();
+        }
+        int Crd2hash(int x, int y)
+        {
+            x = (x + Width) % Width;
+            y = (y + Heigth) % Heigth;
+            return x + y * Width;
+        }
+        int[] Hash2crd(int h)
+        {
+            int x = h % this.Width;
+            return new int[2] { x, (h - x) / this.Width };
+        }
+        void DelCell(int hash, byte playerIndex)
+        {
+            cells2dieArr[playerIndex].Remove(hash); // We can just drop the old array
+            cellMapArr[playerIndex].Remove(hash);   // Makes Sense
+            int[] crd = Hash2crd(hash);
+            field[crd[0], crd[1]] = 0;
+        }
+        void AddCell(int hash, byte playerID)
+        {
+            cells2born.Remove(hash);                    // Just drop the old array
+            cells2bornArr[playerID-1].Remove(hash);     // Same. Just drop the old one in the beginning of new iteration.
+            cellMapArr[playerID-1].Add(hash);
+            int[] crd = Hash2crd(hash);
+            field[crd[0], crd[1]] = playerID;
+
+        }
+
+        /// <returns>ID (NOT index!) of player, whose cell to born. ID = 0 means no need to born.</returns>
+        byte MustBorn(int x, int y)
+        {
+            byte[] N = new byte[8];
+            byte count = 0;
+            if (field[x - 1, y - 1] > 0) { N[0] = field[x - 1, y - 1]; count++; }
+            if (field[x - 1, y] > 0) { N[1] = field[x - 1, y]; count++; }
+            if (field[x - 1, y + 1] > 0) { N[2] = field[x - 1, y + 1]; count++; }
+            if (field[x, y - 1] > 0) { N[3] = field[x, y - 1]; count++; }
+            if (field[x, y + 1] > 0) { N[4] = field[x, y + 1]; count++; }
+            if (field[x + 1, y - 1] > 0) { N[5] = field[x + 1, y - 1]; count++; }
+            if (field[x + 1, y] > 0) { N[6] = field[x + 1, y]; count++; }
+            if (field[x + 1, y + 1] > 0) { N[7] = field[x + 1, y + 1]; count++; }
+            if (count == 3)
+            {
+                byte[] tri = new byte[3];
+                byte found = 0;
+                byte index = 0;
+                while (found != 3)
+                {
+                    if (N[index] > 0)
+                    {
+                        tri[found] = N[index];
+                        found++;
+                    }
+                    index++;
+                }
+                if (tri[0] == tri[1])
+                    return tri[0];
+                if (tri[1] == tri[2])
+                    return tri[1];
+                if (tri[2] == tri[0])
+                    return tri[2];
+                return tri[rnd.Next(3)]; // in case if there are three cells of different color around
+            }
+            else
+            {
+                return 0;
+            }
+        }
+        bool MustDie(int x, int y)
+        {
+            byte N = 0;
+            if (this.field[x - 1, y - 1] > 0)
+                N++;
+            if (this.field[x - 1, y] > 0)
+                N++;
+            if (this.field[x - 1, y + 1] > 0)
+                N++;
+            if (this.field[x, y - 1] > 0)
+                N++;
+            if (this.field[x, y + 1] > 0)
+                N++;
+            if (this.field[x + 1, y - 1] > 0)
+                N++;
+            if (this.field[x + 1, y] > 0)
+                N++;
+            if (this.field[x + 1, y + 1] > 0)
+                N++;
+            if (N == 3 || N == 2)
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+        void CheckBorn(int _x, int _y)
+        {
+            byte cellPlayerID;
+            int hash, x, y;
+
+            x = _x - 1;
+            y = _y - 1;
+            hash = Crd2hash(x, y);
+            if (field[x, y] == 0 && !cells2born.Contains(hash))
+            {
+                cellPlayerID = MustBorn(x, y);
+                if (cellPlayerID > 0)
+                {
+                    cells2bornArr[cellPlayerID-1].Add(hash);
+                    cells2born.Add(hash);
+                }
+            }
+            x = _x;
+            y = _y - 1;
+            hash = Crd2hash(x, y);
+            if (field[x, y] == 0 && !cells2born.Contains(hash))
+            {
+                cellPlayerID = MustBorn(x, y);
+                if (cellPlayerID > 0)
+                {
+                    cells2bornArr[cellPlayerID - 1].Add(hash);
+                    cells2born.Add(hash);
+                }
+            }
+            x = _x + 1;
+            y = _y - 1;
+            hash = Crd2hash(x, y);
+            if (field[x, y] == 0 && !cells2born.Contains(hash))
+            {
+                cellPlayerID = MustBorn(x, y);
+                if (cellPlayerID > 0)
+                {
+                    cells2bornArr[cellPlayerID - 1].Add(hash);
+                    cells2born.Add(hash);
+                }
+            }
+            x = _x + 1;
+            y = _y;
+            hash = Crd2hash(x, y);
+            if (field[x, y] == 0 && !cells2born.Contains(hash))
+            {
+                cellPlayerID = MustBorn(x, y);
+                if (cellPlayerID > 0)
+                {
+                    cells2bornArr[cellPlayerID - 1].Add(hash);
+                    cells2born.Add(hash);
+                }
+            }
+            x = _x + 1;
+            y = _y + 1;
+            hash = Crd2hash(x, y);
+            if (field[x, y] == 0 && !cells2born.Contains(hash))
+            {
+                cellPlayerID = MustBorn(x, y);
+                if (cellPlayerID > 0)
+                {
+                    cells2bornArr[cellPlayerID - 1].Add(hash);
+                    cells2born.Add(hash);
+                }
+            }
+            x = _x;
+            y = _y + 1;
+            hash = Crd2hash(x, y);
+            if (field[x, y] == 0 && !cells2born.Contains(hash))
+            {
+                cellPlayerID = MustBorn(x, y);
+                if (cellPlayerID > 0)
+                {
+                    cells2bornArr[cellPlayerID - 1].Add(hash);
+                    cells2born.Add(hash);
+                }
+            }
+            x = _x - 1;
+            y = _y + 1;
+            hash = Crd2hash(x, y);
+            if (field[x, y] == 0 && !cells2born.Contains(hash))
+            {
+                cellPlayerID = MustBorn(x, y);
+                if (cellPlayerID > 0)
+                {
+                    cells2bornArr[cellPlayerID - 1].Add(hash);
+                    cells2born.Add(hash);
+                }
+            }
+            x = _x - 1;
+            y = _y;
+            hash = Crd2hash(x, y);
+            if (field[x, y] == 0 && !cells2born.Contains(hash))
+            {
+                cellPlayerID = MustBorn(x, y);
+                if (cellPlayerID > 0)
+                {
+                    cells2bornArr[cellPlayerID - 1].Add(hash);
+                    cells2born.Add(hash);
+                }
+            }
+        }
+        void CheckDie(int x, int y, int hash, byte playerIndex)
+        {
+            if (field[x, y] != 0 && MustDie(x, y)) { cells2dieArr[playerIndex].Add(hash); }
+        }
+        void KillCells()
+        {
+            for (byte playerIndex = 0; playerIndex < cells2dieArr.Length; playerIndex++)
+            {
+                foreach (int hash in cells2dieArr[playerIndex])
+                {
+                    DelCell(hash, playerIndex);
+                }
+            }
+        }
+        void BornCells()
+        {
+            for (byte playerIndex = 0; playerIndex < cells2bornArr.Length; playerIndex++)
+            {
+                foreach (int hash in cells2bornArr[playerIndex])
+                {
+                    AddCell(hash, (byte)(playerIndex + 1));
+                }
+            }
+        }
+        public void IterateOnce()
+        {
+            for (int i = 0; i < playerNum; i++)
+                cells2bornArr[i] = new HashSet<int>(256);
+            for (int i = 0; i < playerNum; i++)
+                cells2dieArr[i] = new HashSet<int>(256);
+            // HERE:
+            // Reinitialize cells2born & cells2kill in order to avoid removing items from it
+            // Think about hashset initial size according to the previous generation volume
+            int[] crd;
+            for (byte playerIndex = 0; playerIndex < cellMapArr.Length; playerIndex++)
+            {
+                foreach (int hash in cellMapArr[playerIndex])
+                {
+                    crd = Hash2crd(hash);
+                    CheckBorn(crd[0], crd[1]);
+                    CheckDie(crd[0], crd[1], hash, playerIndex); // распараллелить
+                }
+            }
+            KillCells();
+            BornCells();
+        }
+        public void AddStructure(int[] hashes, byte playerID)
+        {
+            foreach (int hash in hashes)
+            {
+                AddCell(hash, playerID);
+            }
+        }
+
+
+
+        // ############### GLIDER FOR TESTING #######################
+        void AddCell(int x, int y, byte playerID)
+        {
+            cellMapArr[playerID-1].Add(Crd2hash(x, y));
+            field[x, y] = playerID;
+        }
+        void DrawGlider(int x = 1, int y = 1, string option = "SE")
+        {
+            if (option == "SE")
+            {
+                AddCell(x, y + 2, 1);
+                AddCell(x + 1, y + 2, 1);
+                AddCell(x + 2, y + 2, 1);
+                AddCell(x + 2, y + 1, 1);
+                AddCell(x + 1, y, 1);
+            }
+            if (option == "NW")
+            {
+                AddCell(x, y, 1);
+                AddCell(x + 1, y, 1);
+                AddCell(x + 2, y, 1);
+                AddCell(x, y + 1, 1);
+                AddCell(x + 1, y + 2, 1);
             }
         }
     }
+}
+// ############### DEPRECATED OUTPUT METHODS #######################
+// #################################################################
 
-    class _Life
-    {   
-        int          Width;
-        int          Heigth;
-        Field        field;
-        HashSet<int> cellMap;
-        HashSet<int> cells2kill;
-        HashSet<int> cells2born;
-
-        public _Life(int Width, int Heigth)
-        {
-            this.Width      = Width;
-            this.Heigth     = Heigth;
-            this.field      = new Field(Width,Heigth);
-            this.cellMap    = new HashSet<int>(256);
-            this.cells2kill = new HashSet<int>(256);
-            this.cells2born = new HashSet<int>(256);
-            drawGlider(6,2, "NW");
-        }
-        
-        public void getCellMap(ref int[] dest){
-
-            dest = new int[cellMap.Count+2];
-            cellMap.CopyTo(dest, 2);
-            dest[0] = dest.Length;
-            dest[1] = Accounts.GetIntColor("Mephisto");
-            //dest.Print();
-        }
-        /// <summary>
-        /// DEPRECATED, for testing only
-        /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        /// <param name="option"></param>
-        void drawGlider(int x = 1, int y = 1, string option = "SE"){
-            if(option == "SE"){
-                addCell(x,y+2);
-                addCell(x+1,y+2);
-                addCell(x+2,y+2);
-                addCell(x+2,y+1);
-                addCell(x+1,y);
-            }if(option == "NW"){
-                addCell(x,y);
-                addCell(x+1,y);
-                addCell(x+2,y);
-                addCell(x,y+1);
-                addCell(x+1,y+2);
-            }
-        }
-        /// <summary>
-        /// DEPRECATED, for testing only
-        /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        void drawStick(int x = 1, int y = 1){ // Vertical
-            addCell(x+1,y);
-            addCell(x+1,y+1);
-            addCell(x+1,y+2);
-        }
-
-        int crd2hash(int x, int y){
-            x = (x+Width) % Width;
-            y = (y+Heigth) % Heigth;
-            return x + y * Width;
-        }
-        int[] hash2crd(int h){
-            int x = h % this.Width;
-            return new int[2]{x, (h-x)/this.Width};
-        }
-        /// <summary>
-        /// DEPRECATED, for testing only
-        /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        void delCell(int x, int y)
-        {
-            this.cells2kill.Remove(crd2hash(x,y));
-            this.cellMap.Remove(crd2hash(x,y));
-            this.field[x,y] = 0;
-        }
-        void delCell(int hash){
-            this.cells2kill.Remove(hash);
-            this.cellMap.Remove(hash);
-            int[] crd = hash2crd(hash);
-            this.field[crd[0],crd[1]] = 0;
-        }
-        /// <summary>
-        /// DEPRECATED, for testing only
-        /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        void addCell(int x, int y)
-        {
-            this.cells2born.Remove(crd2hash(x,y));
-            this.cellMap.Add(crd2hash(x,y));
-            this.field[x,y] = 1;
-        }
-        void addCell(int hash){
-            this.cells2born.Remove(hash);
-            this.cellMap.Add(hash);
-            int[] crd = hash2crd(hash);
-            this.field[crd[0],crd[1]] = 1;
-
-        }
-
-        bool mustBorn(int x, int y){
-            if(field[x,y] > 0 || cells2born.Contains(crd2hash(x,y))){
-                return false;
-            }
-            byte N = 0;
-            if(this.field[x-1,y-1] > 0) { N++; }
-            if(this.field[x-1,y  ] > 0) { N++; }
-            if(this.field[x-1,y+1] > 0) { N++; }
-            if(this.field[x,  y-1] > 0) { N++; }
-            if(this.field[x,  y+1] > 0) { N++; }
-            if(this.field[x+1,y-1] > 0) { N++; }
-            if(this.field[x+1,y  ] > 0) { N++; }
-            if(this.field[x+1,y+1] > 0) { N++; }
-            if(N == 3){
-                return true;
-            }else{
-                return false;
-            }
-        }
-        bool mustDie(int x, int y){
-            if(this.field[x,y] == 0){
-                return false;
-            }
-            byte N = 0;
-            if(this.field[x-1,y-1] > 0) {N++;}
-            if(this.field[x-1,y]   > 0) {N++;}
-            if(this.field[x-1,y+1] > 0) {N++;}
-            if(this.field[x,y-1]   > 0) {N++;}
-            if(this.field[x,y+1]   > 0) {N++;}
-            if(this.field[x+1,y-1] > 0) {N++;}
-            if(this.field[x+1,y]   > 0) {N++;}
-            if(this.field[x+1,y+1] > 0) {N++;}
-            if(N == 3 || N == 2){
-                return false;
-            }else{
-                return true;
-            }
-        }
-    
-        void checkBorn(int x, int y){
-            if(mustBorn(x-1, y+1)){ cells2born.Add(crd2hash(x-1,y+1)); }
-            if(mustBorn(x-1, y-1)){ cells2born.Add(crd2hash(x-1,y-1)); }
-            if(mustBorn(x-1, y))  { cells2born.Add(crd2hash(x-1,y));   }
-            if(mustBorn(x+1, y+1)){ cells2born.Add(crd2hash(x+1,y+1)); }
-            if(mustBorn(x+1, y-1)){ cells2born.Add(crd2hash(x+1,y-1)); }
-            if(mustBorn(x+1, y))  { cells2born.Add(crd2hash(x+1,y));   }
-            if(mustBorn(x,   y+1)){ cells2born.Add(crd2hash(x,y+1));   }
-            if(mustBorn(x,   y-1)){ cells2born.Add(crd2hash(x,y-1));   }
-        }
-        void checkDie(int x, int y){
-            if(mustDie(x, y)){ cells2kill.Add(crd2hash(x,y)); }
-        }
-
-        void killCells(){
-            foreach (int foo in this.cells2kill){
-                delCell(foo);
-            }
-        }
-        void bornCells(){
-            foreach (int foo in this.cells2born){
-                addCell(foo);
-            }
-        }
-    
-        public void iterateOnce(){
-            int[] crd;
-            foreach (int foo in this.cellMap){
-                crd = hash2crd(foo);
-                checkBorn(crd[0], crd[1]);
-                checkDie(crd[0], crd[1]);
-            }
-            killCells();
-            bornCells();
-        }
-
-        public void addStructure(int[] hashes){
-            foreach(int hash in hashes){
-                addCell(hash);
-            }
-        }
-// ############### OUTPUT METHODS #######################
-// ###############   DEPRECATED   #######################
-
+/*
         public void cls(){
             for(int i = 0; i < 50; i++){
                 Console.WriteLine("\r");
@@ -269,12 +446,13 @@ namespace LifeServer
             cls();
             for(int i = 0; i < iters; i++){
                 cout();
-                iterateOnce();
+                IterateOnce();
                 System.Threading.Thread.Sleep(speed);
             }
         }
     }
 }
+*/
 
 /* DevNotes:
 

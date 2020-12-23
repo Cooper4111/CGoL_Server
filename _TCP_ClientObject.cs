@@ -17,6 +17,7 @@ namespace LifeServer
         EventWaitHandle  wh;
         BinaryFormatter formatter;
         string ID;
+        byte playerID;
         NetCodes NetCode;
 
         public ClientObj(TcpClient tcpClient, string ID)
@@ -80,7 +81,9 @@ namespace LifeServer
                 data = new byte[sizeof(int)];
                 Buffer.BlockCopy(new int[]{cells.Length}, 0, data, 0, data.Length);
                 stream.Write(data, 0, data.Length);
-                
+
+                Console.WriteLine($"Sending field. cells.Length: {cells.Length}");
+                cells.Print();
                 // sending data
                 data = new byte[cells.Length * sizeof(int)];
                 Buffer.BlockCopy(cells, 0, data, 0, data.Length);
@@ -114,6 +117,7 @@ namespace LifeServer
                     if (Accounts.Authorize(loginPass.Split(' ')[0], loginPass.Split(' ')[1]))
                     {
                         authorized = true;
+                        playerID = Accounts.GetPlayerID(loginPass.Split(' ')[0]);
                         Console.WriteLine($"{loginPass} authorized!");
                         formatter.Serialize(stream, NetCode["authorizationSuccessful"]);
                     }
@@ -137,7 +141,7 @@ namespace LifeServer
                     {
                         formatter.Serialize(stream, NetCode["acceptStruct"]);
                         int[] lifeStructure = (int[])formatter.Deserialize(stream);
-                        ThreadMaster.ClientAddCells(lifeStructure); // , clientID);
+                        ThreadMaster.ClientAddCells(lifeStructure, playerID);
                     }
                 }
             }
