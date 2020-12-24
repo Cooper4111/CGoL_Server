@@ -158,7 +158,7 @@ namespace LifeServer
     {
         public static byte[] ToByte(this int i)
         {
-            int[] foo = new int[] { i };
+            int[] foo  = new int[] { i };
             byte[] bar = new byte[sizeof(int)];
             Buffer.BlockCopy(foo, 0, bar, 0, sizeof(int));
             return bar;
