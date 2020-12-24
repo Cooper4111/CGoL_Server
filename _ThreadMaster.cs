@@ -63,7 +63,7 @@ namespace LifeServer
             fieldHeight  = Height;
             generation   = 0;
             life         = new _Life(Width, Height);
-            msPerFrame   = 25;
+            msPerFrame   = 55;
             localCellMap = null;
             startServer();
             Live();

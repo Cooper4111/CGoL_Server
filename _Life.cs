@@ -37,7 +37,7 @@ namespace LifeServer
 
             public Field(int Width, int Heigth)
             {
-                this.Width = Width;
+                this.Width  = Width;
                 this.Heigth = Heigth;
                 field = new byte[Width, Heigth];
                 zeroInit();
@@ -72,7 +72,7 @@ namespace LifeServer
 
         int Width;
         int Heigth;
-        const int playerNum = 7;
+        const int playerNum = 7; // clarify number of possible players, let it be 7 for now
         Field field;
         Random rnd;
         HashSet<int> cells2born;
@@ -82,16 +82,13 @@ namespace LifeServer
         
         public _Life(int ArgWidth, int ArgHeigth)
         {
-            Width = ArgWidth;
-            Heigth = ArgHeigth;
-            field = new Field(Width, Heigth);
-            //cellMap    = new Dictionary<int, byte>();
-
-            cells2born = new HashSet<int>(256);
-
-            cells2dieArr = new HashSet<int>[playerNum];
-            cells2bornArr = new HashSet<int>[playerNum]; // clarify number of possible players
-            cellMapArr = new HashSet<int>[playerNum]; // let is be constant 10 for now
+            Width         = ArgWidth;
+            Heigth        = ArgHeigth;
+            field         = new Field(Width, Heigth);
+            cells2born    = new HashSet<int>(256);
+            cells2dieArr  = new HashSet<int>[playerNum];
+            cells2bornArr = new HashSet<int>[playerNum]; 
+            cellMapArr    = new HashSet<int>[playerNum];
 
             for (int i = 0; i < playerNum; i++)
                 cells2bornArr[i] = new HashSet<int>(256);
@@ -102,8 +99,6 @@ namespace LifeServer
 
             rnd = new Random(DateTimeOffset.Now.Second);
             DrawGlider(4, 4, "NW");
-            //DrawGlider(10, 10, "SE");
-            //DrawGlider(20, 6, "NW");
         }
 
         int TotalCells()
@@ -114,17 +109,12 @@ namespace LifeServer
             {
                 i++;
                 totalCells += cellMapArr[index].Count;
-                Console.WriteLine($"player {index+1} cells count: {cellMapArr[index].Count}, player cells: ");
-                foreach (int hash in cellMapArr[index])
-                    Console.WriteLine($"x: {Hash2crd(hash)[0]}, y: {Hash2crd(hash)[1]}");
             }
             return totalCells;
         }
 
-        /// <summary>
-        /// Consequently writes int[] chunks of following structure {[1] count, [2] color, [3...n] coordinate hashes} to dest 
-        /// </summary>
-        /// <param name="dest"></param>
+        /// <summary> Consequently writes int[] chunks of following structure {[1] count, [2] color, [3...n] coordinate hashes} to dest </summary>
+
         public void GetCellMap(ref int[] dest)
         {
             int offset = 0;
@@ -138,7 +128,6 @@ namespace LifeServer
                 dest[offset-1] = Accounts.GetIntColor(Accounts.ID2username[playerIndex + 1]);
                 offset += dest[offset - 2];
             }
-            dest.Print();
         }
         int Crd2hash(int x, int y)
         {
@@ -153,15 +142,12 @@ namespace LifeServer
         }
         void DelCell(int hash, byte playerIndex)
         {
-            cells2dieArr[playerIndex].Remove(hash); // We can just drop the old array
-            cellMapArr[playerIndex].Remove(hash);   // Makes Sense
+            cellMapArr[playerIndex].Remove(hash);
             int[] crd = Hash2crd(hash);
             field[crd[0], crd[1]] = 0;
         }
         void AddCell(int hash, byte playerID)
         {
-            cells2born.Remove(hash);                    // Just drop the old array
-            cells2bornArr[playerID-1].Remove(hash);     // Same. Just drop the old one in the beginning of new iteration.
             cellMapArr[playerID-1].Add(hash);
             int[] crd = Hash2crd(hash);
             field[crd[0], crd[1]] = playerID;
@@ -340,7 +326,8 @@ namespace LifeServer
         }
         void CheckDie(int x, int y, int hash, byte playerIndex)
         {
-            if (field[x, y] != 0 && MustDie(x, y)) { cells2dieArr[playerIndex].Add(hash); }
+            if (field[x, y] != 0 && MustDie(x, y))
+                cells2dieArr[playerIndex].Add(hash);
         }
         void KillCells()
         {
@@ -364,13 +351,11 @@ namespace LifeServer
         }
         public void IterateOnce()
         {
+            cells2born = new HashSet<int>(256);
             for (int i = 0; i < playerNum; i++)
                 cells2bornArr[i] = new HashSet<int>(256);
             for (int i = 0; i < playerNum; i++)
-                cells2dieArr[i] = new HashSet<int>(256);
-            // HERE:
-            // Reinitialize cells2born & cells2kill in order to avoid removing items from it
-            // Think about hashset initial size according to the previous generation volume
+                cells2dieArr[i]  = new HashSet<int>(256);
             int[] crd;
             for (byte playerIndex = 0; playerIndex < cellMapArr.Length; playerIndex++)
             {
@@ -391,7 +376,6 @@ namespace LifeServer
                 AddCell(hash, playerID);
             }
         }
-
 
 
         // ############### GLIDER FOR TESTING #######################
@@ -421,48 +405,8 @@ namespace LifeServer
         }
     }
 }
-// ############### DEPRECATED OUTPUT METHODS #######################
-// #################################################################
-
-/*
-        public void cls(){
-            for(int i = 0; i < 50; i++){
-                Console.WriteLine("\r");
-            }
-        }
-
-        void cout(){
-            Console.WriteLine("\r");
-            for (int H = 0; H < Heigth; H++) {
-                for (int W = 0; W < Width; W++) {
-                    Console.Write(field[W, H] > 0 ? '#':'.');
-                    if (W == Width - 1) Console.WriteLine("\r");
-                }
-            }
-            Console.SetCursorPosition(0, Console.WindowTop);            
-        }
-
-        public void cstream(int iters = 10, int speed = 200){
-            cls();
-            for(int i = 0; i < iters; i++){
-                cout();
-                IterateOnce();
-                System.Threading.Thread.Sleep(speed);
-            }
-        }
-    }
-}
-*/
 
 /* DevNotes:
-
->>NOTE 000:
-Движок реализован через 2D byte массив и разреженные массивы
-(хеш-сеты от координат для клеток на поле, клеток для удаления, клеток для рождения)
-Можно было обойтись без массива, используя только хешсет и наличие в нём
-элемента за Alive, а отсутствие -- за Dead. Но в перспективе одного бита недостаточно
-т.к. планируется сделать разные "виды" клеток (например, для каждого игрока свой цвет)
-Поэтому, в целях будущего расширения сразу используется byte-массив
 
 >>NOTE 001:
 Построчная проверка всех соседей, без циклов --

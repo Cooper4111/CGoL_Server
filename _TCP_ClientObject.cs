@@ -82,8 +82,6 @@ namespace LifeServer
                 Buffer.BlockCopy(new int[]{cells.Length}, 0, data, 0, data.Length);
                 stream.Write(data, 0, data.Length);
 
-                Console.WriteLine($"Sending field. cells.Length: {cells.Length}");
-                cells.Print();
                 // sending data
                 data = new byte[cells.Length * sizeof(int)];
                 Buffer.BlockCopy(cells, 0, data, 0, data.Length);
