@@ -75,7 +75,7 @@ namespace LifeServer
             byte[] data;
             while (isAlive)
             {
-                this.wh.WaitOne();
+                wh.WaitOne();
                 cells = ThreadMaster.ClientGetCells();
                 // sending metadata
                 data = new byte[sizeof(int)];
@@ -86,6 +86,7 @@ namespace LifeServer
                 data = new byte[cells.Length * sizeof(int)];
                 Buffer.BlockCopy(cells, 0, data, 0, data.Length);
                 stream.Write(data, 0, data.Length);
+
             }
         }
 
@@ -145,4 +146,4 @@ namespace LifeServer
             }
         }
     }
-}
+}   
