@@ -11,6 +11,9 @@ namespace LifeServer
     public static class ClientThreads{
         
         // NB! Lurk for  ConcurrentDictionary, should be much higher perfomance
+        // Make it singleton
+        // Nope
+        // Â _Life äîáàâèòü EventHandler "ß ÂÑ¨, ÇÀÁÈĞÀÉÒÅ!"
         static Dictionary<string, EventWaitHandle> waitHandlers = new Dictionary<string, EventWaitHandle>();
         static object locker = new object();
 

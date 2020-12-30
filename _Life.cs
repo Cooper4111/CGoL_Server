@@ -115,7 +115,7 @@ namespace LifeServer
 
         /// <summary> Consequently writes int[] chunks of following structure {[1] count, [2] color, [3...n] coordinate hashes} to dest </summary>
 
-        public void GetCellMap(ref int[] dest)
+        public void GetCellMap(ref int[] dest) // -> wrapper (?)
         {
             int offset = 0;
             int totalCells = TotalCells();
@@ -159,13 +159,16 @@ namespace LifeServer
         {
             byte[] N = new byte[8];
             byte count = 0;
+            //
+            // в отедльную функцию (?) foreach (arr[8]) -- массив с дельтами координат
+            //
             if (field[x - 1, y - 1] > 0) { N[0] = field[x - 1, y - 1]; count++; }
-            if (field[x - 1, y] > 0) { N[1] = field[x - 1, y]; count++; }
+            if (field[x - 1, y] > 0)     { N[1] = field[x - 1, y];     count++; }
             if (field[x - 1, y + 1] > 0) { N[2] = field[x - 1, y + 1]; count++; }
-            if (field[x, y - 1] > 0) { N[3] = field[x, y - 1]; count++; }
-            if (field[x, y + 1] > 0) { N[4] = field[x, y + 1]; count++; }
+            if (field[x, y - 1] > 0)     { N[3] = field[x, y - 1];     count++; }
+            if (field[x, y + 1] > 0)     { N[4] = field[x, y + 1];     count++; }
             if (field[x + 1, y - 1] > 0) { N[5] = field[x + 1, y - 1]; count++; }
-            if (field[x + 1, y] > 0) { N[6] = field[x + 1, y]; count++; }
+            if (field[x + 1, y] > 0)     { N[6] = field[x + 1, y];     count++; }
             if (field[x + 1, y + 1] > 0) { N[7] = field[x + 1, y + 1]; count++; }
             if (count == 3)
             {
@@ -230,6 +233,7 @@ namespace LifeServer
             x = _x - 1;
             y = _y - 1;
             hash = Crd2hash(x, y);
+            // в отдельную функцию:
             if (field[x, y] == 0 && !cells2born.Contains(hash))
             {
                 cellPlayerID = MustBorn(x, y);

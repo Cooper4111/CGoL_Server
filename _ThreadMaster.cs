@@ -8,7 +8,9 @@ using System.Threading;
 namespace LifeServer
 {
     public static class ThreadMaster{
-
+        // статик для
+        // >> Extension methods
+        // >> Чистые функции (не изменяется состояние системы)
         static int[] localCellMap;
         static int generation;
         static int msPerFrame;
@@ -18,6 +20,10 @@ namespace LifeServer
         static Thread serverThread;
         static _TCP_server server;
         static object localCellMapLocker = new object();
+        /*
+         * Минимизировать блокировки:
+         LocalCellMap и LocalCellMapShadow, перезаписывать, менять местами ссылки
+         */
         static object lifeLocker = new object();
 
         static void startServer(){
@@ -32,7 +38,7 @@ namespace LifeServer
                 lock(lifeLocker){
                     life.IterateOnce();
                 }
-                lock (lifeLocker)
+                lock (lifeLocker) // lifeLocker --> _Life.cs
                 {
                     lock (localCellMapLocker)
                     {
@@ -51,7 +57,7 @@ namespace LifeServer
         }
         public static void ClientAddCells(int[] cellHashes, byte playerID){
             lock(lifeLocker){
-                life.AddStructure(cellHashes, playerID);
+                life.AddStructure(cellHashes, playerID); // Заменить блокировку на PlayerActionBuffer
             }
         }
         public static int[] getDim(){
